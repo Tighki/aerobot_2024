@@ -220,14 +220,29 @@ class DroneController(Node):
         print("Landed at the start position.")
 
     def explore_environment(self):
-        # Move in a simple search pattern (e.g., grid) with reduced speed
-        if abs(self.pose.pose.position.x) < 15 and abs(self.pose.pose.position.y) < 15:
-            self.pose.pose.position.x += 0.05 if abs(self.pose.pose.position.x) < 15 else 0.0
-            self.pose.pose.position.y += 0.05 if abs(self.pose.pose.position.y) >= 15 else 0.0
-        else:
-            self.pose.pose.position.x, self.pose.pose.position.y = -15, -15
-
+        # Check if drone has reached the target altitude
+        if not hasattr(self, 'reached_altitude'):
+            self.reached_altitude = False
         
+        if not self.reached_altitude:
+            # Increase altitude gradually until target altitude is reached
+            if abs(self.pose.pose.position.z - self.altitude) > 0.05:
+                self.pose.pose.position.z += 0.05  # Increment altitude slowly
+                self.get_logger().info(f"Ascending to target altitude: {self.pose.pose.position.z:.2f}m")
+            else:
+                self.reached_altitude = True
+                self.get_logger().info("Reached target altitude, beginning horizontal movement.")
+        
+        if self.reached_altitude:
+            # Proceed with horizontal movement pattern after reaching target altitude
+            if abs(self.pose.pose.position.x) < 15 and abs(self.pose.pose.position.y) < 15:
+                # Move with reduced speed after reaching altitude
+                self.pose.pose.position.x += 0.05 if abs(self.pose.pose.position.x) < 15 else 0.0
+                self.pose.pose.position.y += 0.05 if abs(self.pose.pose.position.y) >= 15 else 0.0
+            else:
+                # Reset position to start over in the search area
+                self.pose.pose.position.x, self.pose.pose.position.y = -15.0, -15.0
+
 def main(args=None):
     rclpy.init(args=args)
         
